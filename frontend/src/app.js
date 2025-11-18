@@ -11,13 +11,16 @@ function App() {
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  const handleImageUpload = async (imageFile) => {
+  const handleImageUpload = async (uploadData) => {
     setLoading(true);
     setError(null);
-    setSelectedImage(URL.createObjectURL(imageFile));
+    
+    // Create object URL from the file for display
+    const imageUrl = URL.createObjectURL(uploadData.file);
+    setSelectedImage(imageUrl);
     
     try {
-      const result = await detectPotholes(imageFile);
+      const result = await detectPotholes(uploadData);
       setDetectionResult(result);
     } catch (err) {
       setError(err.message || 'An error occurred during detection');

@@ -4,43 +4,38 @@ const ImageUploader = ({ onImageUpload }) => {
   const fileInputRef = useRef(null);
   const [dragActive, setDragActive] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
-  const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'web'
+  const [activeTab, setActiveTab] = useState('upload');
+  const [location, setLocation] = useState(null);
+  const [locationEnabled, setLocationEnabled] = useState(false);
 
-  // Handle paste events
-  useEffect(() => {
-    const handlePaste = (event) => {
-      const items = event.clipboardData?.items;
-      if (!items) return;
-
-      // Check for pasted image
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const file = items[i].getAsFile();
-          if (file) {
-            handleFiles([file]);
-            break;
-          }
+  // Get user location
+  const getLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          });
+          setLocationEnabled(true);
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          setLocationEnabled(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
         }
-      }
-
-      // Check for pasted text (URL)
-      const pastedText = event.clipboardData?.getData('text');
-      if (pastedText && isImageUrl(pastedText)) {
-        setImageUrl(pastedText);
-        setActiveTab('web');
-      }
-    };
-
-    document.addEventListener('paste', handlePaste);
-    return () => document.removeEventListener('paste', handlePaste);
-  }, []);
-
-  const isImageUrl = (url) => {
-    return /\.(jpeg|jpg|gif|png|webp)$/.test(url.toLowerCase()) || 
-           url.startsWith('data:image/') ||
-           url.includes('images.unsplash.com') ||
-           url.includes('picsum.photos');
+      );
+    }
   };
+
+  useEffect(() => {
+    getLocation();
+  }, []);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -85,7 +80,14 @@ const ImageUploader = ({ onImageUpload }) => {
       return;
     }
 
-    onImageUpload(file);
+    // Create object with file and location data
+    const uploadData = {
+      file: file,
+      location: location,
+      timestamp: new Date().toISOString()
+    };
+
+    onImageUpload(uploadData);
   };
 
   const handleWebImage = async () => {
@@ -113,12 +115,25 @@ const ImageUploader = ({ onImageUpload }) => {
         return;
       }
 
-      onImageUpload(file);
+      const uploadData = {
+        file: file,
+        location: location,
+        timestamp: new Date().toISOString()
+      };
+
+      onImageUpload(uploadData);
       setImageUrl('');
     } catch (error) {
       alert('Failed to load image from URL. Please check the URL and try again.');
       console.error('Error loading web image:', error);
     }
+  };
+
+  const isImageUrl = (url) => {
+    return /\.(jpeg|jpg|gif|png|webp)$/.test(url.toLowerCase()) || 
+           url.startsWith('data:image/') ||
+           url.includes('images.unsplash.com') ||
+           url.includes('picsum.photos');
   };
 
   const onButtonClick = () => {
@@ -137,6 +152,24 @@ const ImageUploader = ({ onImageUpload }) => {
 
   return (
     <div className="image-uploader">
+      {/* Location Status */}
+      <div className="location-status">
+        <div className={`location-indicator ${locationEnabled ? 'enabled' : 'disabled'}`}>
+          {locationEnabled ? '📍' : '❌'} 
+          GPS: {locationEnabled ? 
+            `Enabled (${location?.latitude?.toFixed(4) || 'N/A'}, ${location?.longitude?.toFixed(4) || 'N/A'})` : 
+            'Disabled - No location data'
+          }
+        </div>
+        <button 
+          onClick={getLocation} 
+          className="location-refresh-btn"
+          title="Refresh location"
+        >
+          🔄
+        </button>
+      </div>
+
       {/* Tab Navigation */}
       <div className="upload-tabs">
         <button 
