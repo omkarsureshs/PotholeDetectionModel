@@ -8,6 +8,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 import base64
+from services.map_service import map_service
 
 # Import the detector at the top
 from model.pothole_detector import PotholeDetector
@@ -22,7 +23,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 # Initialize detector
-detector = PotholeDetector()
+detector = PotholeDetector('model/best.pt')
 
 def allowed_file(filename):
     """Check if file has allowed extension"""
@@ -365,6 +366,55 @@ def generate_pdf_report():
         import traceback
         print(f"🔍 Full traceback: {traceback.format_exc()}")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+
+@app.route('/api/map/potholes', methods=['GET'])
+def get_potholes():
+    """Get potholes for map display"""
+    try:
+        # Get bounding box from query params
+        ne_lat = float(request.args.get('ne_lat', 90.0))
+        ne_lng = float(request.args.get('ne_lng', 180.0))
+        sw_lat = float(request.args.get('sw_lat', -90.0))
+        sw_lng = float(request.args.get('sw_lng', -180.0))
+        
+        potholes = map_service.get_potholes_by_area(ne_lat, ne_lng, sw_lat, sw_lng)
+        return jsonify({'potholes': potholes})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/map/heatmap', methods=['GET'])
+def get_heatmap_data():
+    """Get heatmap data"""
+    try:
+        heatmap_data = map_service.get_heatmap_data()
+        return jsonify({'heatmap_data': heatmap_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/map/statistics', methods=['GET'])
+def get_map_statistics():
+    """Get overall statistics"""
+    try:
+        stats = map_service.get_statistics()
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/map/save-detection', methods=['POST'])
+def save_detection_to_map():
+    """Save detection data to map database"""
+    try:
+        data = request.get_json()
+        if not data or 'detection_data' not in data:
+            return jsonify({'error': 'Detection data required'}), 400
+        
+        session_id = map_service.save_pothole_data(data['detection_data'])
+        return jsonify({'success': True, 'session_id': session_id})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     
 @app.route('/api/model/info', methods=['GET'])
 def model_info():
