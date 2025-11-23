@@ -45,3 +45,10 @@ frontend/node_modules/
 *.pyd
 *.dll
 *.pack
+backend/Potfinal/
+frontend/node_modules/
+*.dll
+*.pyd
+*.pack
+__pycache__/
+*.pyc
