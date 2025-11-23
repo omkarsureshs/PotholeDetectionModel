@@ -40,3 +40,8 @@ yarn-error.log*
 EOL
 
 # Remove all tracked files that should be ignored
+backend/Potfinal/Lib/
+frontend/node_modules/
+*.pyd
+*.dll
+*.pack
