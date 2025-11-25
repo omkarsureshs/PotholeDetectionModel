@@ -90,3 +90,35 @@ yarn-debug.log*
 dist/
 .next/
 out/
+
+# Documentation & Markdown files (session notes)
+*.md
+!README.md
+
+# Heavy model and data files
+*.pt
+*.pth
+*.weights
+*.h5
+*.pb
+*.onnx
+*.whl
+*.tar.gz
+*.zip
+
+# Video and large media
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.wav
+*.mp3
+
+# Temporary and backup files
+*.tmp
+*.bak
+*.backup
+*~
+*.swp
+*.swo

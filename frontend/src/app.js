@@ -29,6 +29,17 @@ function App() {
     checkBackendStatus();
   }, []);
 
+  // Auto-refresh user stats every 5 seconds when on map tab
+  useEffect(() => {
+    if (!currentUser || activeTab !== 'map') return;
+
+    const interval = setInterval(() => {
+      refreshUserStats(currentUser);
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [currentUser, activeTab]);
+
   const checkBackendStatus = async () => {
     try {
       // ✅ FIXED: Use full URL with port 5000
@@ -73,11 +84,45 @@ function App() {
   };
 
   const handleLogin = (user) => {
+    console.log('✅ User logged in:', user);
     setCurrentUser(user);
+    // Refresh user stats after login
+    refreshUserStats(user);
   };
 
   const handleRegister = (user) => {
+    console.log('✅ User registered:', user);
     setCurrentUser(user);
+    // Refresh user stats after registration
+    refreshUserStats(user);
+  };
+
+  const refreshUserStats = async (user) => {
+    try {
+      console.log('📊 Refreshing user stats...');
+      const response = await fetch(`${API_BASE_URL}/api/user/stats`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const stats = await response.json();
+        console.log('📊 User stats:', stats);
+        
+        // Update current user with fresh stats
+        setCurrentUser(prev => ({
+          ...prev,
+          statistics: {
+            total_reports: stats.total_reports || 0,
+            high_severity_reports: stats.high_severity_reports || 0,
+            medium_severity_reports: stats.medium_severity_reports || 0,
+            low_severity_reports: stats.low_severity_reports || 0,
+            reputation_points: stats.reputation_points || 0
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error refreshing user stats:', error);
+    }
   };
 
   const handleLogout = async () => {

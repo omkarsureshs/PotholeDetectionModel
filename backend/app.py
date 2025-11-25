@@ -748,13 +748,101 @@ def get_user_potholes():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/debug/cookies', methods=['GET', 'POST', 'OPTIONS'])
+def debug_cookies():
+    """Debug endpoint to check what cookies Flask receives"""
+    print("\n" + "=" * 60)
+    print("🔍 DEBUG COOKIES ENDPOINT")
+    print("=" * 60)
+    print(f"Request method: {request.method}")
+    print(f"Request headers: {dict(request.headers)}")
+    print(f"Request cookies: {dict(request.cookies)}")
+    print(f"REQUEST.ENVIRON: {dict(request.environ)}")
+    print("=" * 60 + "\n")
+    
+    return jsonify({
+        'method': request.method,
+        'cookies_received': dict(request.cookies),
+        'headers': dict(request.headers),
+        'origin': request.origin,
+        'remote_addr': request.remote_addr
+    })
+
 @app.route('/api/user/stats', methods=['GET'])
 def get_user_stats():
     """Get statistics for the current user"""
-    return jsonify({
-        'total_reports': 0,
-        'user_id': request.cookies.get('user_id', 'unknown')
-    })
+    try:
+        session_token = request.cookies.get('session_token')
+        print(f"🔍 Session token from cookie: {session_token[:16] if session_token else 'NONE'}...")
+        print(f"🔍 All cookies: {dict(request.cookies)}")
+        
+        if not session_token:
+            print("❌ No session token found")
+            return jsonify({
+                'total_reports': 0,
+                'high_severity_reports': 0,
+                'medium_severity_reports': 0,
+                'low_severity_reports': 0,
+                'reputation_points': 0,
+                'user_id': 'unknown'
+            })
+        
+        # Get user from session
+        user = map_service.validate_session(session_token)
+        if not user:
+            print(f"❌ Invalid session: {session_token[:16]}...")
+            return jsonify({
+                'total_reports': 0,
+                'high_severity_reports': 0,
+                'medium_severity_reports': 0,
+                'low_severity_reports': 0,
+                'reputation_points': 0,
+                'user_id': 'unknown'
+            })
+        
+        user_id = user['user_id']
+        print(f"✅ Valid session for: {user['username']}")
+        
+        # Query potholes for this user
+        conn = sqlite3.connect(map_service.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN severity = 'high' THEN 1 ELSE 0 END) as high,
+                SUM(CASE WHEN severity = 'medium' THEN 1 ELSE 0 END) as medium,
+                SUM(CASE WHEN severity = 'low' THEN 1 ELSE 0 END) as low
+            FROM potholes
+            WHERE user_id = ?
+        ''', (user_id,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        total = result[0] or 0
+        high = result[1] or 0
+        medium = result[2] or 0
+        low = result[3] or 0
+        
+        print(f"✅ User {user['username']} stats: {total} potholes ({high}H, {medium}M, {low}L)")
+        
+        return jsonify({
+            'total_reports': total,
+            'high_severity_reports': high,
+            'medium_severity_reports': medium,
+            'low_severity_reports': low,
+            'reputation_points': 0,
+            'user_id': user_id
+        })
+    except Exception as e:
+        print(f"❌ Error getting user stats: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': str(e),
+            'total_reports': 0
+        }), 500
 
 @app.route('/api/map/potholes', methods=['GET'])
 def get_potholes():

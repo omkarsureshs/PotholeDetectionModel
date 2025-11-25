@@ -89,6 +89,16 @@
   transform: translateY(-2px);
 }
 
+.fullscreen-button {
+  background: #fd7e14;
+  color: white;
+}
+
+.fullscreen-button:hover:not(:disabled) {
+  background: #e86d00;
+  transform: translateY(-2px);
+}
+
 .save-button {
   background: #28a745;
   color: white;
@@ -97,6 +107,21 @@
 .save-button:hover:not(:disabled) {
   background: #218838;
   transform: translateY(-2px);
+}
+
+.heatmap-button {
+  background: #dc3545;
+  color: white;
+}
+
+.heatmap-button:hover:not(:disabled) {
+  background: #c82333;
+  transform: translateY(-2px);
+}
+
+.heatmap-button.active {
+  background: #bd2130;
+  border: 2px solid #fff;
 }
 
 .map-controls button:disabled {
